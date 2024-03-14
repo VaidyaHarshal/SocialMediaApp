@@ -10,11 +10,11 @@ import { Loader } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { useToast } from "@/components/ui/use-toast"
 import { useCreateUserAccount, useSignInAccount } from "@/lib/react-query/queriesAndMutations"
-import { userUserContext } from "@/context/AuthContext"
+import { useUserContext } from "@/context/AuthContext"
 
 const SignUpForm = () => {
   const { toast } = useToast();
-  const {checkAuthUser, isLoading: isUserLoading} = userUserContext();
+  const {checkAuthUser, isLoading: isUserLoading} = useUserContext();
   const navigate = useNavigate()
   const {mutateAsync: createUserAccount, isPending: isCreatingAccount} = useCreateUserAccount();
   const {mutateAsync: signInAccount, isPending: isSigningIn} = useSignInAccount();
@@ -31,28 +31,29 @@ const SignUpForm = () => {
   })
  
   // 2. Define a submit handler.
-  async function onSubmit(values: z.infer<typeof SignUpValidation>) {
-    const newUser = await createUserAccount(values);
-    
-    if(!newUser) {
-      return toast({title: 'Sign up failed. Please try again.'})
-    }
-
-    const session = await signInAccount({
-      email: values.email,
-      password: values.password
-    })
-
-    if(!session) {
-      return toast({title: 'Sign in failed. Please try again.'})
-    }
-
-    const isLoggedIn = await checkAuthUser();
-    if(isLoggedIn) {
-      form.reset();
-      navigate('/')
-    } else {
-      return toast({title: 'Sign up failed. Please try again.'})
+  async function handleSignUp(user: z.infer<typeof SignUpValidation>) {
+    try{
+      const newUser = await createUserAccount(user);
+      if(!newUser) {
+        return toast({title: 'Sign up failed. Please try again.'})
+      }
+      const session = await signInAccount({
+        email: user.email,
+        password: user.password
+      })
+      
+      if(!session) {
+        return toast({title: 'Sign in failed. Please try again.'})
+      }
+      const isLoggedIn = await checkAuthUser();
+      if(isLoggedIn) {
+        form.reset();
+        navigate('/')
+      } else {
+        return toast({title: 'Sign up failed. Please try again.'})
+      }
+    } catch(error) {
+      console.log(error)
     }
   }
 
@@ -66,7 +67,7 @@ const SignUpForm = () => {
         <p className="text-light-3 small-medium md:base-regular">
           To use InstaVerse, please enter your details
         </p>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-5 w-full mt-4">
+        <form onSubmit={form.handleSubmit(handleSignUp)} className="flex flex-col gap-5 w-full mt-4">
           <FormField
             control={form.control}
             name="name"
